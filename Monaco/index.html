@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monaco Editor</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.37.1/min/vs/loader.js"></script>
+  <script>
+    require.config({
+      paths: {
+        'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.37.1/min/vs'
+      }
+    });
+    window.MonacoEnvironment = {
+      getWorkerUrl: function(workerId, label) {
+        return `data:text/javascript;charset=utf-8,${encodeURIComponent(`
+          self.MonacoEnvironment = {
+            baseUrl: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.37.1/min/'
+          };
+          importScripts('https://cdn.jsdelivr.net/npm/monaco-editor@0.37.1/min/vs/base/worker/workerMain.js');`
+        )}`;
+      }
+    };
+  </script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: rgb(25, 25, 25);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .tabs-container {
+      display: flex;
+      background: rgb(25, 25, 25);
+      padding: 4px 8px;
+      gap: 4px;
+      border-bottom: 1px solid #333;
+    }
+
+    .tab {
+      display: flex;
+      align-items: center;
+      padding: 6px 12px;
+      background: #2d2d2d;
+      color: #ccc;
+      cursor: pointer;
+      border-radius: 3px;
+      gap: 8px;
+      font-size: 13px;
+      user-select: none;
+      transition: all 0.2s ease;
+      animation: tabAppear 0.2s ease;
+    }
+
+    @keyframes tabAppear {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .tab:hover {
+      background: #3c3c3c;
+    }
+
+    .tab.active {
+      background: #1e1e1e;
+      color: #fff;
+    }
+
+    .settings-btn, .close-btn {
+      opacity: 0.6;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 4px;
+      transition: all 0.2s ease;
+    }
+
+    .settings-btn:hover, .close-btn:hover {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+
+    .add-tab-btn, .settings-global-btn {
+      background: transparent;
+      border: none;
+      color: #ccc;
+      cursor: pointer;
+      padding: 6px 12px;
+      font-size: 13px;
+      border-radius: 3px;
+      transition: all 0.2s ease;
+    }
+
+    .add-tab-btn:hover, .settings-global-btn:hover {
+      background: #3c3c3c;
+      color: #fff;
+      transform: scale(1.05);
+    }
+
+    .editor-container {
+      flex: 1;
+      position: relative;
+    }
+
+    .editor {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: none;
+    }
+
+    .editor.active {
+      display: block;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal[style*="display: flex"] {
+      opacity: 1;
+    }
+
+    .modal-content {
+      background: #252526;
+      padding: 20px;
+      border-radius: 4px;
+      min-width: 300px;
+      color: #ccc;
+      transform: translateY(0);
+      transition: transform 0.2s ease;
+      animation: modalAppear 0.2s ease;
+    }
+
+    @keyframes modalAppear {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .modal-content h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-weight: normal;
+    }
+
+    .modal-content input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 16px;
+      background: #3c3c3c;
+      border: 1px solid #555;
+      color: #fff;
+      border-radius: 3px;
+      box-sizing: border-box;
+      transition: border-color 0.2s ease;
+    }
+
+    .modal-content input:focus {
+      border-color: #0e639c;
+      outline: none;
+    }
+
+    .modal-content input[type="color"] {
+      height: 40px;
+      padding: 4px;
+    }
+
+    .modal-content button {
+      padding: 8px 16px;
+      margin-right: 8px;
+      background: #0e639c;
+      color: #fff;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
+
+    .modal-content button:hover {
+      background: #1177bb;
+      transform: translateY(-1px);
+    }
+
+    .modal-content button:active {
+      transform: translateY(0);
+    }
+
+    .setting-item {
+      margin-bottom: 16px;
+    }
+
+    .setting-item label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="tabs-container" id="tabs">
+      <button class="add-tab-btn" onclick="addTab()">+</button>
+      <button class="settings-global-btn" onclick="openGlobalSettings()">⚙</button>
+    </div>
+    <div class="editor-container" id="editors"></div>
+  </div>
+
+  <div id="renameModal" class="modal">
+    <div class="modal-content">
+      <h3>Tab Settings</h3>
+      <input type="text" id="tabNameInput" placeholder="Enter tab name">
+      <button onclick="saveTabSettings()">Save</button>
+      <button onclick="closeModal('renameModal')">Close</button>
+    </div>
+  </div>
+
+  <div id="globalSettingsModal" class="modal">
+    <div class="modal-content">
+      <h3>Global Settings</h3>
+      <div class="setting-item">
+        <label>Editor Background Color:</label>
+        <input type="color" id="editorBgColor" value="#1e1e1e">
+      </div>
+      <button onclick="saveGlobalSettings()">Save</button>
+      <button onclick="resetToDefaultColor()">Reset Color</button>
+      <button onclick="closeModal('globalSettingsModal')">Close</button>
+    </div>
+  </div>
+
+  <script>
+    let monacoLoaded = false;
+    let monaco;
+    let tabs = [];
+    let editors = [];
+    let activeTab = null;
+    let tabToRenameIndex = null;
+    const DEFAULT_EDITOR_COLOR = '#0d0d0d';
+    let globalSettings = {
+      editorBgColor: DEFAULT_EDITOR_COLOR
+    };
+    let isCreatingTab = false;
+
+    // Improved Monaco initialization
+    function waitForMonaco() {
+      return new Promise((resolve) => {
+        const check = () => {
+          if (window.monaco) {
+            monaco = window.monaco;
+            monacoLoaded = true;
+            resolve();
+          } else {
+            setTimeout(check, 50);
+          }
+        };
+        check();
+      });
+    }
+
+    // Fixed initialization
+    require(['vs/editor/editor.main'], function() {
+      monaco = window.monaco;
+      monacoLoaded = true;
+      console.log('Monaco loaded');
+      loadGlobalSettings().then(() => {
+        loadEditors();
+      });
+    });
+
+    // Completely reworked tab closing function
+    async function closeTab(index) {
+      event.stopPropagation();
+      
+      if (tabs.length <= 1) {
+        alert("Cannot close the last tab");
+        return;
+      }
+
+      try {
+        // Dispose the editor
+        if (editors[index]) {
+          editors[index].dispose();
+        }
+
+        // Remove DOM elements
+        tabs[index].element.remove();
+        document.getElementById("editor" + index)?.remove();
+
+        // Remove from arrays
+        editors.splice(index, 1);
+        tabs.splice(index, 1);
+
+        // Recreate all editor containers and update indices
+        const editorsContainer = document.getElementById("editors");
+        editorsContainer.innerHTML = ''; // Clear all editor containers
+
+        // Recreate editor containers and update tab handlers
+        for (let i = 0; i < tabs.length; i++) {
+          // Create new editor container
+          const editorContainer = document.createElement("div");
+          editorContainer.className = "editor";
+          editorContainer.id = "editor" + i;
+          editorContainer.style.display = "none";
+          editorsContainer.appendChild(editorContainer);
+
+          // Update tab handlers
+          const tab = tabs[i];
+          tab.element.onclick = () => switchTab(i);
+          tab.element.querySelector('.settings-btn').onclick = (e) => {
+            e.stopPropagation();
+            openRenameModal(i);
+          };
+          tab.element.querySelector('.close-btn').onclick = (e) => {
+            e.stopPropagation();
+            closeTab(i);
+          };
+
+          // Recreate Monaco editor
+          const content = editors[i]?.getValue() || "";
+          editors[i] = await createMonacoEditor(editorContainer, content);
+        }
+
+        // Update active tab
+        if (activeTab === index) {
+          activeTab = Math.max(0, index - 1);
+        } else if (activeTab > index) {
+          activeTab--;
+        }
+
+        // Switch to the new active tab
+        switchTab(activeTab);
+        saveEditors();
+
+      } catch (err) {
+        console.error('Error closing tab:', err);
+        alert('Error closing tab. Please try refreshing the page.');
+      }
+    }
+
+    // Добавим кастомную тему Monaco с анимациями
+    function createMonacoEditor(container, content = "") {
+      monaco.editor.defineTheme('animatedDark', {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [],
+        colors: {
+          'editor.background': '#1e1e1e',
+          'editor.lineHighlightBackground': '#2a2a2a',
+          'editorCursor.foreground': '#80a4c2',
+          'editor.selectionBackground': '#264f78',
+          'editor.selectionHighlightBackground': '#264f7844'
+        }
+      });
+
+      const editor = monaco.editor.create(container, {
+        value: content,
+        language: "javascript",
+        theme: "animatedDark",
+        automaticLayout: true,
+        minimap: { enabled: false },
+        cursorBlinking: "smooth",
+        cursorSmoothCaretAnimation: "on",
+        smoothScrolling: true,
+        animationDuration: 200,
+        mouseWheelScrollSensitivity: 0.5,
+        renderLineHighlight: "all",
+        scrollbar: {
+          useShadows: true,
+          verticalScrollbarSize: 10,
+          horizontalScrollbarSize: 10,
+          verticalHasArrows: false,
+          horizontalHasArrows: false,
+          vertical: 'visible',
+          horizontal: 'visible'
+        }
+      });
+
+      editor.onDidChangeModelContent(() => {
+        saveEditors();
+      });
+
+      return editor;
+    }
+
+    // Improved tab switching
+    function switchTab(index) {
+      if (index < 0 || index >= tabs.length) return;
+      
+      activeTab = index;
+      
+      // Update editor visibility
+      document.querySelectorAll(".editor").forEach((e, i) => {
+        e.style.display = i === index ? "block" : "none";
+      });
+
+      // Update tab styles
+      document.querySelectorAll(".tab").forEach((t, i) => {
+        t.classList.toggle("active", i === index);
+      });
+
+      // Refresh editor layout
+      if (editors[index]) {
+        editors[index].layout();
+        editors[index].focus();
+      }
+    }
+
+    // Обновим функцию создания вкладки
+    async function createTab(name = "New Tab", content = "") {
+      if (isCreatingTab) {
+        console.log('Tab creation in progress, please wait...');
+        return;
+      }
+
+      isCreatingTab = true;
+
+      try {
+        const tabIndex = tabs.length;
+        
+        let tab = document.createElement("div");
+        tab.className = "tab";
+        tab.innerHTML = `<span>${name}</span> 
+                        <span class="settings-btn" onclick="event.stopPropagation(); openRenameModal(${tabIndex})">⚙</span>
+                        <span class="close-btn" onclick="event.stopPropagation(); closeTab(${tabIndex})">×</span>`;
+        tab.onclick = () => switchTab(tabIndex);
+        
+        let editorContainer = document.createElement("div");
+        editorContainer.className = "editor";
+        editorContainer.id = "editor" + tabIndex;
+        editorContainer.style.display = "none";
+        
+        document.getElementById("tabs").insertBefore(tab, document.querySelector(".add-tab-btn"));
+        document.getElementById("editors").appendChild(editorContainer);
+
+        tabs.push({
+          element: tab,
+          name: name
+        });
+
+        editors[tabIndex] = await createMonacoEditor(editorContainer, content);
+
+        switchTab(tabIndex);
+        saveEditors();
+
+      } catch (err) {
+        console.error('Error creating tab:', err);
+        if (tabs[tabs.length - 1]) {
+          tabs[tabs.length - 1].element.remove();
+          tabs.pop();
+        }
+        document.getElementById("editor" + tabs.length)?.remove();
+        alert('Failed to create new tab. Please try again.');
+      } finally {
+        isCreatingTab = false;
+      }
+    }
+
+    // Improved save functionality
+    function saveEditors() {
+      try {
+        const data = tabs.map((tab, index) => ({
+          name: tab.name,
+          content: editors[index] ? editors[index].getValue() : ""
+        }));
+        
+        const saveState = {
+          tabs: data,
+          activeTab: activeTab,
+          settings: globalSettings
+        };
+
+        localStorage.setItem('editorsState', JSON.stringify(saveState));
+      } catch (err) {
+        console.error('Save error:', err);
+      }
+    }
+
+    // Improved load functionality
+    async function loadEditors() {
+      try {
+        const savedState = localStorage.getItem('editorsState');
+        
+        if (savedState) {
+          const state = JSON.parse(savedState);
+          
+          clearEditors();
+          
+          if (state.settings) {
+            globalSettings = state.settings;
+          }
+          
+          if (state.tabs && state.tabs.length > 0) {
+            for (const tab of state.tabs) {
+              await createTab(tab.name, tab.content);
+            }
+            
+            if (typeof state.activeTab === 'number') {
+              switchTab(Math.min(state.activeTab, state.tabs.length - 1));
+            }
+          } else {
+            await createTab();
+          }
+        } else {
+          await createTab();
+        }
+      } catch (err) {
+        console.error('Load error:', err);
+        await createTab();
+      }
+    }
+
+    // Improved settings handling
+    async function loadGlobalSettings() {
+      try {
+        const saved = localStorage.getItem('globalSettings');
+        if (saved) {
+          globalSettings = JSON.parse(saved);
+        }
+      } catch (err) {
+        console.error('Error loading settings:', err);
+      }
+    }
+
+    function saveGlobalSettings() {
+      try {
+        globalSettings.editorBgColor = document.getElementById('editorBgColor').value;
+        localStorage.setItem('globalSettings', JSON.stringify(globalSettings));
+        applyGlobalSettings();
+        closeModal('globalSettingsModal');
+      } catch (err) {
+        console.error('Error saving settings:', err);
+      }
+    }
+
+    // Utility functions
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
+
+    function clearEditors() {
+      tabs.forEach((tab, index) => {
+        if (editors[index]) {
+          editors[index].dispose();
+        }
+      });
+      
+      document.querySelectorAll('.tab').forEach(el => el.remove());
+      document.querySelectorAll('.editor').forEach(el => el.remove());
+      
+      tabs = [];
+      editors = [];
+      activeTab = null;
+    }
+
+    // Safe addTab wrapper
+    async function addTab() {
+      try {
+        await createTab();
+      } catch (err) {
+        console.error('Error in addTab:', err);
+      }
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.ctrlKey && e.key === 'w') {
+        e.preventDefault();
+        if (activeTab !== null) {
+          closeTab(activeTab);
+        }
+      }
+    });
+
+    function openGlobalSettings() {
+      document.getElementById('editorBgColor').value = globalSettings.editorBgColor;
+      document.getElementById('globalSettingsModal').style.display = 'flex';
+    }
+
+    function resetToDefaultColor() {
+      document.getElementById('editorBgColor').value = DEFAULT_EDITOR_COLOR;
+      globalSettings.editorBgColor = DEFAULT_EDITOR_COLOR;
+      localStorage.setItem('globalSettings', JSON.stringify(globalSettings));
+      applyGlobalSettings();
+    }
+
+    function applyGlobalSettings() {
+      if (!monacoLoaded) return;
+
+      monaco.editor.defineTheme('custom-theme', {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [],
+        colors: {
+          'editor.background': globalSettings.editorBgColor
+        }
+      });
+
+      editors.forEach(editor => {
+        if (editor) {
+          editor.updateOptions({
+            theme: 'custom-theme'
+          });
+        }
+      });
+    }
+
+    function openRenameModal(index) {
+      tabToRenameIndex = index;
+      document.getElementById("tabNameInput").value = tabs[index].name;
+      document.getElementById("renameModal").style.display = "flex";
+    }
+
+    function saveTabSettings() {
+      const newName = document.getElementById("tabNameInput").value.trim() || "New Tab";
+      
+      if (tabs[tabToRenameIndex]) {
+        tabs[tabToRenameIndex].name = newName;
+        tabs[tabToRenameIndex].element.querySelector("span").textContent = newName;
+        saveEditors();
+      }
+      closeModal('renameModal');
+    }
+  </script>
+</body>
+</html>
+
