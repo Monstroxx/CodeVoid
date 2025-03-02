@@ -149,5 +149,5 @@ preventDebugging()
 -- UI anzeigen
 showInjectionSuccess()
 
-wait(1)
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Monstroxx/CodeVoid/refs/heads/main/injectPopup.lua"))()
+--wait(1)
+--loadstring(game:HttpGet("https://raw.githubusercontent.com/Monstroxx/CodeVoid/refs/heads/main/injectPopup.lua"))()
