@@ -144,7 +144,10 @@ print("[CodeVoid]: UNC Identifier = " .. getgenv().getUNCIdentifier())
 
 -- Aktivierung der Schutzmechanismen
 preventDebugging()
-warn("[CodeVoid]: Schutzmechanismen aktiviert")
+--warn("[CodeVoid]: Schutzmechanismen aktiviert")
 
 -- UI anzeigen
 showInjectionSuccess()
+
+wait(1)
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Monstroxx/CodeVoid/refs/heads/main/injectPopup.lua"))()
