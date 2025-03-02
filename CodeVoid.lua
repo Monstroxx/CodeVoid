@@ -147,7 +147,7 @@ preventDebugging()
 --warn("[CodeVoid]: Schutzmechanismen aktiviert")
 
 -- UI anzeigen
-showInjectionSuccess()
+--showInjectionSuccess()
 
 --wait(1)
 --loadstring(game:HttpGet("https://raw.githubusercontent.com/Monstroxx/CodeVoid/refs/heads/main/injectPopup.lua"))()
