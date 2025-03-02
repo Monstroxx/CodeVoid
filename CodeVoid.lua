@@ -53,7 +53,7 @@ getgenv().safeRequest = function(options)
 end
 
 -- Schutz vor unsicheren Dateioperationen
-local safeBasePath = "/workspace/"
+local safeBasePath = "folder/workspace/"
 local blockedExtensions = {".exe", ".bat", ".dll", ".cmd", ".scr", ".msi", ".vbs", ".ps1"}
 
 local function isSafePath(path)
@@ -109,11 +109,42 @@ getgenv().createSecureUI = function()
     return gui
 end
 
+-- Erfolgsnachricht anzeigen (ähnlich Roblox-Achievement Popup)
+getgenv().showInjectionSuccess = function()
+    local ui = getgenv().createSecureUI()
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 300, 0, 50)
+    frame.Position = UDim2.new(0.5, -150, 1, 10)
+    frame.BackgroundColor3 = Color3.new(0, 0, 0)
+    frame.BackgroundTransparency = 0.3
+    frame.Parent = ui
+
+    local text = Instance.new("TextLabel")
+    text.Text = "Injected: CodeVoid"
+    text.Size = UDim2.new(1, 0, 1, 0)
+    text.TextScaled = true
+    text.TextColor3 = Color3.new(1, 1, 1)
+    text.Parent = frame
+
+    -- Animation (rein- und raussliden)
+    frame:TweenPosition(UDim2.new(0.5, -150, 0.85, 0), "Out", "Quad", 1, true)
+    task.wait(3)
+    frame:TweenPosition(UDim2.new(0.5, -150, 1, 10), "Out", "Quad", 1, true, function()
+        ui:Destroy()
+    end)
+end
+
 -- Identifikation für UNC-Test
 getgenv().getUNCIdentifier = function()
     return "CodeVoid - Secure Mode"
 end
 
+-- Testweise Ausgabe für UNC-Check
+print("[CodeVoid]: UNC Identifier = " .. getgenv().getUNCIdentifier())
+
 -- Aktivierung der Schutzmechanismen
 preventDebugging()
 warn("[CodeVoid]: Schutzmechanismen aktiviert")
+
+-- UI anzeigen
+showInjectionSuccess()
